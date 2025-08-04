@@ -1,0 +1,12 @@
+{
+  "name": "nodejs-dummy-app",
+  "version": "1.0.0",
+  "description": "A simple Node.js application for EKS Blue/Green deployment demo.",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

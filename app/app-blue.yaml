@@ -1,0 +1,50 @@
+# app/app-blue.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app-blue
+  namespace: demo-dev 
+  labels:
+    app: nodejs-app
+    version: blue 
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: nodejs-app
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+        version: blue
+    spec:
+      containers:
+        - name: nodejs-app
+          image: <ECR_REPO_URL>:1.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "100Mi"
+            limits:
+              cpu: "100m"
+              memory: "200Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3

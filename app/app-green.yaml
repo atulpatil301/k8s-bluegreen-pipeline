@@ -1,0 +1,50 @@
+# app/app-green.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app-green
+  namespace: demo-dev # Changed to demo-dev
+  labels:
+    app: nodejs-app
+    version: green # Key label for blue/green
+spec:
+  replicas: 0 # Start with 0, Jenkins/script will scale this up
+  selector:
+    matchLabels:
+      app: nodejs-app
+      version: green
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+        version: green
+    spec:
+      containers:
+        - name: nodejs-app
+          image: <ECR_REPO_URL>:2.0.0 # Placeholder for new version
+          ports:
+            - containerPort: 3000
+          env:
+            - name: APP_VERSION
+              value: "2.0.0" # New version
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "100Mi"
+            limits:
+              cpu: "100m"
+              memory: "200Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3

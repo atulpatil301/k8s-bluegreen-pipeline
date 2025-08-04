@@ -1,0 +1,8 @@
+# app/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-dev
+  labels:
+    environment: dev
+    app-tier: application

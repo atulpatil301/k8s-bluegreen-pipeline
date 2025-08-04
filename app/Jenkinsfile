@@ -1,0 +1,117 @@
+// Jenkinsfile in your Node.js app
+
+// Define environment variables
+def ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+def ECR_REPO_PATH = "k8s-pipeline/dev/nodejs-app"
+def BLUE_DEPLOYMENT = "nodejs-app-blue"
+def GREEN_DEPLOYMENT = "nodejs-app-green"
+def APP_NAMESPACE = "demo-dev"
+def APP_SERVICE = "nodejs-app-service"
+
+// Define new version 
+def NEW_APP_VERSION = "2.0.${BUILD_NUMBER}"
+def NEW_IMAGE_TAG = NEW_APP_VERSION
+def NEW_IMAGE_URI = "${ECR_REGISTRY}/${ECR_REPO_PATH}:${NEW_IMAGE_TAG}"
+
+// Define the temporary file for kubectl apply
+def TEMP_BLUE_GREEN_YAML = "/tmp/blue-green-deployment.yaml"
+
+
+pipeline {
+    agent any // 
+
+    environment {
+        AWS_ACCOUNT_ID = "${AWS_ACCOUNT_ID}"
+        AWS_REGION = "${AWS_REGION}"
+
+    }
+
+    stages {
+        stage('Build Green Image') {
+            steps {
+                script {
+                    echo "Building Docker image for Green deployment: ${NEW_IMAGE_URI}"
+                    // Login to ECR
+                    withCredentials([aws(credentialsId: 'aws-credentials', variable: 'AWS_CREDS')]) { 
+                        sh """
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                        """
+                    }
+
+                    // Build image for linux/amd64 (matches your EKS nodes)
+                    sh """
+                    docker buildx build \\
+                      --platform linux/amd64 \\
+                      -t "${NEW_IMAGE_URI}" \\
+                      --push \\
+                      -f app/Dockerfile \\ // Path to your Node.js app's Dockerfile within the repo
+                      app // Build context
+                    """
+                    echo "Green image ${NEW_IMAGE_URI} built and pushed."
+                }
+            }
+        }
+
+        stage('Deploy Green (Scale Up)') {
+            steps {
+                script {
+                    echo "Scaling up Green deployment: ${GREEN_DEPLOYMENT}"
+
+                    sh """
+                    sed "s|<ECR_REPO_URL>|${ECR_REGISTRY}/${ECR_REPO_PATH}|g; s|APP_VERSION=2.0.0|APP_VERSION=${NEW_APP_VERSION}|g" \
+                        app/app-green.yaml > ${TEMP_BLUE_GREEN_YAML}
+                    """
+                    sh "kubectl apply -f ${TEMP_BLUE_GREEN_YAML} -n ${APP_NAMESPACE}"
+                    sh "kubectl scale deployment ${GREEN_DEPLOYMENT} --replicas=1 -n ${APP_NAMESPACE}"
+                    sh "kubectl rollout status deployment/${GREEN_DEPLOYMENT} -n ${APP_NAMESPACE} --timeout=5m"
+                    echo "Green deployment scaled up."
+                }
+            }
+        }
+
+        stage('Traffic Cutover (Manual Approval)') {
+            steps {
+                input message: 'Cutover traffic to Green deployment? (Verify green is healthy)', ok: 'Cutover'
+            }
+        }
+
+        stage('Update Service & Scale Down Old (Blue)') {
+            steps {
+                script {
+                    echo "Updating service to point to Green deployment..."
+                    sh """
+                    kubectl patch service ${APP_SERVICE} -n ${APP_NAMESPACE} -p '{"spec":{"selector":{"version":"green"}}}'
+                    """
+                    echo "Service updated to point to Green. Traffic is now Live on Green."
+                    echo "Scaling down old Blue deployment..."
+                    sh "kubectl scale deployment ${BLUE_DEPLOYMENT} --replicas=0 -n ${APP_NAMESPACE}"
+                    echo "Old Blue deployment scaled down."
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                // Remove temporary YAML file
+                sh "rm ${TEMP_BLUE_GREEN_YAML}"
+                echo "Temporary files cleaned."
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline finished successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check build logs.'
+            // Optional: Send notifications, rollback etc.
+        }
+        always {
+            // Log LoadBalancer URL for easy access
+            sh """
+            echo "Node.js app LoadBalancer URL: http://\$(kubectl get svc ${APP_SERVICE} -n ${APP_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+            """
+        }
+    }
+}
