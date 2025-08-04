@@ -1,81 +1,83 @@
-1. Project Overview
-This repository provides an automated setup for a robust CI/CD pipeline on AWS:
+# Kubernetes Blue/Green CI/CD Pipeline on AWS
 
-Infrastructure as Code (Terraform): Provisions a dedicated VPC, EKS Cluster (t3.small worker nodes), and all necessary IAM roles and ECR repositories.
+## 1. Project Overview
+This repository automates the setup of a robust CI/CD pipeline on AWS using **Terraform**, **EKS**, and **Jenkins**. It includes:
 
-Custom Jenkins Server: A Docker image with essential plugins (Kubernetes, Git, Docker, AWS Credentials) is built and deployed on EKS for CI/CD orchestration.
+- **Infrastructure as Code (Terraform):**  
+  - Provisions a dedicated VPC, EKS cluster (t3.small worker nodes), IAM roles, and ECR repositories.
+- **Custom Jenkins Server:**  
+  - Docker image with essential plugins (Kubernetes, Git, Docker, AWS Credentials) deployed on EKS.
+- **EBS CSI Driver:**  
+  - Enables dynamic persistent storage for Jenkins.
+- **Blue/Green Deployment:**  
+  - Demonstrates zero-downtime deployments with a sample Node.js application.
 
-EBS CSI Driver: Enables dynamic persistent storage for Jenkins.
+---
 
-Blue/Green Deployment: A sample Node.js application demonstrates zero-downtime deployments.
+## 2. Prerequisites
+Ensure the following tools are installed and configured locally:
 
-2. Prerequisites
-Ensure these tools are installed and configured on your local machine:
+- **AWS CLI (v2):** Configured with an admin profile (e.g., `k8s-pipeline-admin`)
+- **Terraform (v1.x.x+)**
+- **kubectl**
+- **Helm (v3.x.x+)**
+- **Docker Desktop / Engine:** Must support `linux/amd64` builds with `buildx` enabled
+- **eksctl**
+- **jq**, **curl** (usually pre-installed on Linux/macOS)
 
-AWS CLI (v2): Configured with an admin profile (e.g., k8s-pipeline-admin).
+---
 
-Terraform (v1.x.x+):
+## 3. Deployment
 
-kubectl:
+### 3.1 Run the Deployment Script
+1. Navigate to the project root.  
+2. Make the script executable:
+   ```bash
+   chmod +x bootstrap.sh
 
-Helm (v3.x.x+):
+Deployment typically takes 20–40 minutes.
 
-Docker Desktop / Docker Engine: Must be running, with buildx enabled and supporting linux/amd64 builds.
+## 4. Accessing Applications
 
-eksctl:
+### 4.1 Accessing Jenkins
+- **Get the admin password:**
+  ```bash
+  kubectl exec --namespace jenkins -it svc/jenkins -c jenkins -- /bin/cat /run/secrets/additional/chart-admin-password && echo
 
-jq, curl: (Usually pre-installed on Linux/macOS).
+ Get the Jenkins URL (printed by bootstrap.sh):
 
-3. Deployment
-The entire project is deployed using the bootstrap.sh script.
+### 4.2 Accessing the Node.js Application
 
-3.1: One-Time Jenkins YAML Template Setup
-Before the first run, prepare the Jenkins Kubernetes YAML template:
+Get the Application URL (printed by bootstrap.sh):
 
-3.2: Run the Deployment Script
-Go to your project root directory.
+## 5. CI/CD with Jenkins
 
-Make bootstrap.sh executable: chmod +x bootstrap.sh
+### 1 Configure AWS Credentials:
+-  In Jenkins UI: Manage Jenkins > Manage Credentials > (global) > Add Credentials
 
-Run the script: ./bootstrap.sh
+-  Add AWS credentials with ID aws-credentials (use Access Key/Secret Key from k8s-pipeline-admin).
 
-Deployment typically takes 20-40 minutes.
+### 2 Create a Pipeline Job:
+- Create a new Pipeline job named Nodejs-Blue-Green-Pipeline.
 
-4. Accessing Applications
-After successful deployment:
+- Set Pipeline Definition to “Pipeline script from SCM.”
 
-4.1: Accessing Jenkins
-Get Password: kubectl exec --namespace jenkins -it svc/jenkins -c jenkins -- /bin/cat /run/secrets/additional/chart-admin-password && echo
+- Select Git as SCM and provide the Node.js app repository URL.
 
-Get URL: Look for the URL printed by bootstrap.sh: Jenkins is available at: http://<YOUR-JENKINS-LB-HOSTNAME>
+- Set Script Path to Jenkinsfile.
 
-4.2: Accessing Node.js Application
-Get URL: Look for the URL printed by bootstrap.sh: Node.js app (Blue) is available at: http://<YOUR-NODEJS-APP-LB-HOSTNAME>
+## 6. Teardown
+  - Make the teardown script executable:
+    ```bash
+    chmod +x scripts/teardown.sh 
+    ```bash
+    ./scripts/teardown.sh
+  - Confirm when prompted.
+  - Teardown typically takes 20–40 minutes.
 
-Open the URL in your browser.
+## 7. Cost Considerations
+  - Uses t3.small instances for cost optimization.
 
-5. CI/CD with Jenkins
-Configure AWS Credentials in Jenkins: In Jenkins UI, go to Manage Jenkins > Manage Credentials > (global) > Add Credentials. Add AWS Credentials with ID aws-credentials (using your k8s-pipeline-admin user's Access Key ID and Secret Access Key).
+  - Services like EKS Control Plane, Load Balancers, NAT Gateway, and ECR will incur charges even under the Free Tier.
 
-Create Jenkins Pipeline Job: Create a new "Pipeline" item named Nodejs-Blue-Green-Pipeline.
-
-Configure SCM: Set Pipeline Definition to "Pipeline script from SCM", SCM to "Git", and provide your Node.js app's Git repository URL. Set "Script Path" to Jenkinsfile.
-
-
-6. Teardown
-To destroy all AWS resources created by this project, run the teardown.sh script.
-
-Go to your project root directory.
-
-Make scripts/teardown.sh executable: chmod +x scripts/teardown.sh
-
-Run the script: ./scripts/teardown.sh
-
-Confirm when prompted.
-
-Teardown typically takes 20-40 minutes.
-
-7. Cost Considerations
-This setup utilizes t3.small EC2 instances for cost optimization. However, some services (EKS Control Plane, Load Balancers, NAT Gateway, ECR) will incur charges even within the AWS Free Tier.
-
-It is highly recommended to run scripts/teardown.sh when you are not actively using the environment to avoid unexpected AWS costs. Always monitor your AWS Billing Dashboard.
+  - Recommendation: Run scripts/teardown.sh when not actively using the environment. Monitor your AWS Billing Dashboard regularly.
