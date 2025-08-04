@@ -3,12 +3,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nodejs-app-green
-  namespace: demo-dev # Changed to demo-dev
+  namespace: demo-dev 
   labels:
     app: nodejs-app
-    version: green # Key label for blue/green
+    version: green
 spec:
-  replicas: 0 # Start with 0, Jenkins/script will scale this up
+  replicas: 0 
   selector:
     matchLabels:
       app: nodejs-app
@@ -21,12 +21,12 @@ spec:
     spec:
       containers:
         - name: nodejs-app
-          image: <ECR_REPO_URL>:2.0.0 # Placeholder for new version
+          image: <ECR_REPO_URL>:2.0.0 
           ports:
             - containerPort: 3000
           env:
             - name: APP_VERSION
-              value: "2.0.0" # New version
+              value: "2.0.0"
           resources:
             requests:
               cpu: "50m"

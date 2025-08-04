@@ -1,6 +1,5 @@
 # /tmp/ebs_csi_rbac.yaml
-# Standard RBAC for AWS EBS CSI Driver (v1.46.0, compatible with csi-components:v5.3.0)
-# Found from: https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v1.46.0/charts/aws-ebs-csi-driver/templates/controller-rbac.yaml
+# Standard RBAC for AWS EBS CSI Driver 
 # (Slightly simplified for core components)
 
 apiVersion: v1

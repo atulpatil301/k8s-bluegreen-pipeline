@@ -6,7 +6,7 @@ echo "  Blue/Green Deployment Script             "
 echo "#############################################"
 
 # Environment variables that should be passed to the script (e.g., from Jenkins)
-APP_NAMESPACE="demo-dev" # 
+APP_NAMESPACE="demo-dev" 
 
 if [ -z "$ECR_REPO_URL" ]; then
     echo "Error: ECR_REPO_URL not provided. Aborting."

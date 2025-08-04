@@ -13,7 +13,6 @@ def NEW_APP_VERSION = "2.0.${BUILD_NUMBER}"
 def NEW_IMAGE_TAG = NEW_APP_VERSION
 def NEW_IMAGE_URI = "${ECR_REGISTRY}/${ECR_REPO_PATH}:${NEW_IMAGE_TAG}"
 
-// Define the temporary file for kubectl apply
 def TEMP_BLUE_GREEN_YAML = "/tmp/blue-green-deployment.yaml"
 
 
@@ -105,10 +104,10 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed. Check build logs.'
-            // Optional: Send notifications, rollback etc.
+         
         }
         always {
-            // Log LoadBalancer URL for easy access
+            // Log LoadBalancer URL
             sh """
             echo "Node.js app LoadBalancer URL: http://\$(kubectl get svc ${APP_SERVICE} -n ${APP_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
             """

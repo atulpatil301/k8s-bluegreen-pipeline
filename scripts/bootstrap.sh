@@ -58,7 +58,6 @@ export JENKINS_ADMIN_PASSWORD # Export to make it available to install_jenkins.s
 # --- Terraform Deployment ---
 echo "Initializing and applying Terraform for ${ENVIRONMENT} environment (using local state)..."
 cd terraform
-# Initialize Terraform (will default to local backend)
 terraform init
 # Plan and Apply infrastructure
 terraform plan -var-file="envs/${ENVIRONMENT}/terraform.tfvars" -var="environment=${ENVIRONMENT}" -out="tfplan_${ENVIRONMENT}"
@@ -67,6 +66,7 @@ terraform apply "tfplan_${ENVIRONMENT}"
 # Get Terraform Outputs (EKS Cluster Name and ECR Repo URL are essential)
 EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
 ECR_REPO_URL=$(terraform output -raw ecr_repository_url)
+
 # Extract base ECR URL for manifest updates
 MY_ECR_BASE=$(echo "${ECR_REPO_URL}" | awk -F'/' '{print $1 "/" $2 "/" $3}')
 echo "My Private ECR Base URL: ${MY_ECR_BASE}"
