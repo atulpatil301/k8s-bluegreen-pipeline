@@ -37,7 +37,7 @@ for cmd in "${REQUIRED_COMMANDS[@]}"; do
         echo >&2 "${cmd} is not installed. Please install it and try again. Aborting."
         exit 1
     }
-fi
+done
 
 # AWS CLI configuration check
 if ! aws configure list &>/dev/null; then
