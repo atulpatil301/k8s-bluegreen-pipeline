@@ -34,6 +34,7 @@ Ensure the following tools are installed and configured locally:
 2. Make the script executable:
    ```bash
    chmod +x bootstrap.sh
+   example: ./scripts/bootstrap.sh -e dev -r ap-south-1
 
 Deployment typically takes 20–40 minutes.
 
